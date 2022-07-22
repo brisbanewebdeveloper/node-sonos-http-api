@@ -27,7 +27,7 @@
   },
   "engines": {
     "node": ">=4.0.0",
-    "npm": "^2.0.0"
+    "npm": "^8.0.0"
   },
   "main": "lib/sonos-http-api.js",
   "license": "MIT",
