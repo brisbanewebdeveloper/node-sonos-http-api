@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sonos Controller</title>
+  <link rel="stylesheet" href="/tailwind-reset.min.css">
+  <!-- https://matcha.mizu.sh -->
+  <link rel="stylesheet" href="/matcha-2.0.1.css">
+  <link rel="stylesheet" href="/app.css">
+  <!-- https://alpinejs.dev -->
+  <script src="/alpine-3.14.1.min.js" defer></script>
+  <script src="/app.js"></script>
+</head>
+<body data-color-scheme="dark">
+
+  <section
+    x-data="sonosController()"
+    x-bind:class="getPlaybackStateClass()"
+  >
+
+    <!-- Currently Playing -->
+    <div id="currently-playing" class="mt-1">
+      <div x-show="currentTrack" class="flex column align-center">
+        <div id="artwork">
+          <img
+            x-show="currentTrack.artwork"
+            :src="currentTrack.artwork"
+            alt="Album Art"
+            class="rounded"
+          >
+        </div>
+        <div id="container-title" class="width mt-1">
+          <div class="inner">
+            <p id="title"><strong x-text="currentTrack.title"></strong></p>
+            <p id="artist" x-text="currentTrack.artist"></p>
+          </div>
+        </div>
+      </div>
+      <p x-show="!currentTrack" class="bold mb-0"><strong>No Music</strong></p>
+    </div>
+
+    <!-- Time Gauge -->
+    <div class="time-gauge">
+      <div
+        class="flex align-center w-full gauge"
+        x-show="canUseGauge()"
+      >
+        <input
+          type="range"
+          x-model="currentTrack.elapsedTime"
+          @change="setElapsedTime()"
+          min="0"
+          :max="currentTrack.duration"
+          class="w-full cursor-pointer"
+        >
+      </div>
+      <div
+        class="flex space-between w-full info"
+        x-show="canUseGauge()"
+      >
+        <span x-text="currentTrack.elapsedTime" class="mr-1"></span>
+        <span x-text="currentTrack.duration" class="ml-1"></span>
+      </div>
+    </div>
+
+    <!-- Shuffle/Prev/Play|Stop/Next/Repeat -->
+    <div
+      x-bind:disabled="currentSpeaker"
+      id="current-speaker"
+      class="flex center wrap main-buttons"
+    >
+      <div class="shuffle">
+        <button
+          x-text="shuffleMode()"
+          x-show="canPlayMusic('next')"
+          @click="setShuffle()"
+          class="sonos-btn rounded cursor-pointer"
+        ></button>
+      </div>
+      <div class="prev">
+        <button
+          x-show="canPlayMusic('previous')"
+          @click="nextMusic('previous')"
+          class="sonos-btn rounded cursor-pointer"
+        >
+          Prev
+        </button>
+      </div>
+      <div class="play-stop">
+        <button
+          x-show="canPlayMusic()"
+          @click="playMusic()"
+          class="sonos-btn rounded cursor-pointer"
+        >
+          Play
+        </button>
+        <button
+          x-show="canPlayMusic('stop')"
+          @click="stopMusic()"
+          class="sonos-btn rounded cursor-pointer"
+        >
+          Stop
+        </button>
+      </div>
+      <div class="next">
+        <button
+          x-show="canPlayMusic('next')"
+          @click="nextMusic('next')"
+          class="sonos-btn rounded cursor-pointer"
+        >
+          Next
+        </button>
+      </div>
+      <div class="repoeat">
+        <button
+          x-text="repeatMode()"
+          x-show="canPlayMusic('next')"
+          @click="setRepeat()"
+          class="sonos-btn rounded cursor-pointer"
+        ></button>
+      </div>
+      <!-- <div class="width" x-text="currentTrack.playbackState"></div> -->
+    </div>
+
+    <!-- Volume -->
+    <div id="volume-bar" class="flex align-center w-full" x-show="currentSpeaker">
+        <span
+          @click="setMute()"
+          x-text="muteMode()"
+          class="mr-1 cursor-pointer"
+        ></span>
+        <input
+          type="range"
+          x-model="volume"
+          @change="setVolume"
+          min="0"
+          max="100"
+          step="1"
+          class="w-full cursor-pointer"
+        >
+        <span
+          @click="updateNowPlaying(true)"
+          x-text="getVolume()"
+          class="ml-1 cursor-pointer"
+        ></span>
+    </div>
+
+    <!-- Queue List/Current Speaker|Select Speaker/Playlists -->
+    <div class="flex space-between align-center mb-2 speakers">
+      <button
+        @click="document.getElementById('queue').showModal()"
+      >Q</button>
+      <button
+        x-text="currentSpeaker"
+        @click="document.getElementById('select-speakers').showModal()"
+      ></button>
+      <button
+        x-show="playlists.length > 0"
+        @click="document.getElementById('playlists').showModal()"
+      >P</button>
+    </div>
+
+    <!-- Queue -->
+    <dialog id="queue">
+      <header>
+        <h2>Queue</h2>
+      </header>
+      <div class="flex column center">
+        TBA
+      </div>
+      <footer>
+        <form method="dialog" class="centered">
+          <button type="submit">Close</button>
+        </form>
+      </footer>
+    </dialog>
+
+    <!-- Playlists -->
+    <dialog id="playlists">
+      <header>
+        <h2>Playlists</h2>
+      </header>
+      <div class="flex column center">
+        <template x-for="playlist in playlists" :key="playlist.id">
+          <div class="inline flex align-center mb-1 item">
+            <button
+              @click="onClickPlayPlaylist(playlist.id)"
+              x-text="playlist.name"
+              class="sonos-btn p-2 rounded w-full text-left"
+            ></button>
+          </div>
+        </template>
+      </div>
+      <footer>
+        <form method="dialog" class="centered">
+          <button type="submit">Close</button>
+        </form>
+      </footer>
+    </dialog>
+
+    <!-- Available Speakers -->
+    <dialog id="select-speakers">
+      <header>
+        <h2>Speaker</h2>
+      </header>
+      <div class="flex column center">
+        <template x-for="speaker in speakers" :key="speaker.id">
+          <div class="inline flex align-center mb-1 speaker">
+            <input
+              x-model="currentSpeaker"
+              :id="speaker.id"
+              type="radio"
+              :value="speaker.id"
+              @change="updateNowPlaying(true)"
+            />
+            <label
+              :for="speaker.id"
+              class="cursor-pointer"
+              x-text="speaker.name"
+            ></label>
+          </div>
+        </template>
+      </div>
+      <footer>
+        <form method="dialog" class="centered">
+          <button type="submit">Close</button>
+        </form>
+      </footer>
+    </dialog>
+
+    <!-- Settings -->
+    <dialog id="settings">
+      <header>
+        <h2>Settings</h2>
+      </header>
+      <div class="flex column center">
+        TBA
+      </div>
+      <footer>
+        <form method="dialog" class="centered">
+          <button type="submit">Close</button>
+        </form>
+      </footer>
+    </dialog>
+
+  </section>
+
+</body>
+</html>

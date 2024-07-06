@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sonos Controller</title>
+  <!-- https://matcha.mizu.sh -->
+  <link rel="stylesheet" href="static/matcha-2.0.1.css">
+  <!-- https://alpinejs.dev -->
+  <script src="static/alpine-3.14.1.min.js" defer></script>
+  <style>
+  h1 {
+    border: none;
+  }
+  </style>
+</head>
+<body>
+  <section x-data="appController()">
+
+    <h1 class="centered">Version: <span x-text="version"></span></h1>
+
+    <p class="centered" x-text="getUrl()"></p>
+
+    <ul>
+      <li>Copy above URL and open it on your browser.</li>
+      <li>This application actually sends the request to Sonos speaker so don't close this application.</li>
+    </ul>
+
+  </section>
+</body>
+<script>
+function appController() {
+  return {
+
+    version: '',
+    baseUrl: '',
+
+    async init() {
+      this.version = await window.app.version();
+      this.baseUrl = await window.app.baseUrl();
+    },
+
+    getUrl() {
+      return `${this.baseUrl}/app.html`;
+    }
+  }
+}
+</script>
+</html>

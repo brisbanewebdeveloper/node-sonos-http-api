@@ -14,17 +14,13 @@ obj/
 *.pfx
 *.key
 
-# VS Code
+# VS
 .vscode
 .vscode/launch.json
-.history
 
 # Dev
-README-dev.md
-/dev-*
-/static/app-custom.css
-/static/app-custom.js
-/static/app-custom.html
+static/app-custom.html
+README-*.md
 
 # Ignore Mac DS_Store files
 .DS_Store

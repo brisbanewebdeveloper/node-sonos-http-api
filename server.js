@@ -1,4 +1,5 @@
 'use strict';
+
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
@@ -6,27 +7,30 @@ const auth = require('basic-auth');
 const SonosSystem = require('sonos-discovery');
 const logger = require('sonos-discovery/lib/helpers/logger');
 const SonosHttpAPI = require('./lib/sonos-http-api.js');
-const serveStatic = require('serve-static');
+const ServeStatic = require('serve-static');
 const settings = require('./settings');
 
-const serve = new serveStatic(settings.webroot);
+const serve = new ServeStatic(settings.webroot);
 const discovery = new SonosSystem(settings);
 const api = new SonosHttpAPI(discovery, settings);
 
-var requestHandler = function (req, res) {
-  req.addListener('end', function () {
-    serve(req, res, function (err) {
+const app = require('./app');
 
+const requestHandler = (req, res) => {
+  req.addListener('end', () => {
+    serve(req, res, () => {
       // If error, route it.
       // This bypasses authentication on static files!
-      //if (!err) {
-      //  return;
-      //}
+      // if (!err) {
+      //   return;
+      // }
 
       if (settings.auth) {
-        var credentials = auth(req);
+        const credentials = auth(req);
 
-        if (!credentials || credentials.name !== settings.auth.username || credentials.pass !== settings.auth.password) {
+        if (!credentials
+          || credentials.name !== settings.auth.username
+          || credentials.pass !== settings.auth.password) {
           res.statusCode = 401;
           res.setHeader('WWW-Authenticate', 'Basic realm="Access Denied"');
           res.end('Access denied');
@@ -53,10 +57,8 @@ var requestHandler = function (req, res) {
   }).resume();
 };
 
-let server;
-
 if (settings.https) {
-  var options = {};
+  const options = {};
   if (settings.https.pfx) {
     options.pfx = fs.readFileSync(settings.https.pfx);
     options.passphrase = settings.https.passphrase;
@@ -64,31 +66,31 @@ if (settings.https) {
     options.key = fs.readFileSync(settings.https.key);
     options.cert = fs.readFileSync(settings.https.cert);
   } else {
-    logger.error("Insufficient configuration for https");
-    return;
+    logger.error('Insufficient configuration for https');
+    process.exit(1);
   }
 
   const secureServer = https.createServer(options, requestHandler);
-  secureServer.listen(settings.securePort, function () {
+  secureServer.listen(settings.securePort, () => {
     logger.info('https server listening on port', settings.securePort);
   });
 }
 
-server = http.createServer(requestHandler);
+const server = http.createServer(requestHandler);
 
 process.on('unhandledRejection', (err) => {
   logger.error(err);
 });
 
-let host = settings.ip;
-server.listen(settings.port, host, function () {
+const host = settings.ip;
+server.listen(settings.port, host, () => {
   logger.info('http server listening on', host, 'port', settings.port);
 });
 
 server.on('error', (err) => {
   if (err.code && err.code === 'EADDRINUSE') {
-    logger.error(`Port ${settings.port} seems to be in use already. Make sure the sonos-http-api isn't 
-    already running, or that no other server uses that port. You can specify an alternative http port 
+    logger.error(`Port ${settings.port} seems to be in use already. Make sure the sonos-http-api isn't
+    already running, or that no other server uses that port. You can specify an alternative http port
     with property "port" in settings.json`);
   } else {
     logger.error(err);
@@ -97,4 +99,7 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
-
+// Execute only if the script is executed via `npm run start`
+if (process.env.npm_lifecycle_event === 'start') {
+  app.run();
+}
