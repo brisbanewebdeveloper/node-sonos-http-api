@@ -29,7 +29,7 @@ module.exports = (baseDir) => {
   // check if the file exists
   if (fs.existsSync(settingsFileFullPath)) {
     const userSettings = tryLoadJson(settingsFileFullPath);
-    settings = { ...settings, userSettings };
+    settings = { ...settings, ...userSettings };
   }
   logger.debug(settings);
 
