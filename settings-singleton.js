@@ -31,7 +31,7 @@ module.exports = (baseDir) => {
     const userSettings = tryLoadJson(settingsFileFullPath);
     settings = { ...settings, ...userSettings };
   }
-  logger.debug(settings);
+  logger.info(settings);
 
   if (!fs.existsSync(`${settings.webroot}/tts/`)) {
     fs.mkdirSync(`${settings.webroot}/tts/`);
