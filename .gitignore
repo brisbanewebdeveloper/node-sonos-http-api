@@ -17,6 +17,7 @@ obj/
 # VS
 .vscode
 .vscode/launch.json
+.history
 
 # Ignore Mac DS_Store files
 .DS_Store
