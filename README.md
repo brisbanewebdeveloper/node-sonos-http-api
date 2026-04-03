@@ -108,7 +108,7 @@ The actions supported as of today:
 * sub (on/off/gain/crossover/polarity) See SUB section for more info
 * nightmode (on/off/toggle, PLAYBAR only)
 * speechenhancement (on/off/toggle, PLAYBAR only)
-* bass/treble (use -10 thru 10 as value. 0 is neutral)
+* bass/treble (use -10 through to 10 as the value. 0 is neutral)
 
 
 State
@@ -403,6 +403,7 @@ Experimental support for TTS. Today the following providers are available:
 * AWS Polly
 * Google (default)
 * macOS say command
+* Elevenlabs
 
 It will use the one you configure in settings.json. If you define settings for multiple TTS services, it will not be guaranteed which one it will choose!
 
@@ -531,7 +532,15 @@ You can also specify it for this application only, using:
 	}
 ```
 
-Choose the region where you registered your account, or the one closest to you. Polly is only supported in US East (Northern Virginia), US West (Oregon), US East (Ohio), and EU (Ireland) as of today (dec 2016)
+To select the neural engine, append `Neural` to the name, e.g. `DanielNeural`.
+
+To send SSML instead of plain text, URL-encode the full SSML payload in the phrase segment and append `?ssml=true` to the request. This uses the same TTS flow as the normal `say`, `sayall`, and `saypreset` endpoints.
+
+Example:
+
+	/Office/say/%3Cspeak%3EHello%20%3Cbreak%20time%3D%221s%22/%3E%20dinner%20is%20ready%3C/speak%3E/Nicole?ssml=true
+
+Choose the region where you registered your account, or the one closest to you.
 
 If you have your credentials elsewhere and want to stick with the default voice, you still need to make sure that the aws config option is set to trigger AWS TTS:
 
@@ -607,6 +616,48 @@ To get a current list of voices, you would need to use the AWS CLI and invoke th
 | US Spanish | es-US | Male | Miguel |
 | Welsh | cy-GB | Female | Gwyneth |
 | Welsh English | en-GB-WLS | Male | Geraint |
+
+#### Elevenlabs
+
+Elevenlabs is a TTS service enabling generatiung TTS audio files using AI generated voices.
+
+Requires API Key and optionally default voiceId.
+
+Since Elevenlabs AI models are multilingual by default, there is no need (nor place) for `language` parameter in 
+Elevenlabs API. Because of this, `language` parameter in URL is used to inject custom `voiceId` on per-request basis. You will
+need to either configure default voiceId in `settings.json` or provide `voiceId` with every HTTP request.
+
+##### Config
+
+Minimal:
+```json
+	{
+	  "elevenlabs": {
+		"auth": {
+		  "apiKey": ""
+		}
+	  }
+	}
+```
+
+Full:
+```json
+	{
+	  "elevenlabs": {
+		"auth": {
+		  "apiKey": ""
+		},
+		"config": {
+		  "voiceId": "",
+		  "stability": 0.5,
+		  "similarityBoost": 0.5,
+		  "speakerBoost": true,
+		  "style": 1,
+		  "modelId": "eleven_multilingual_v2"
+		}
+	  }
+	}
+```
 
 #### Google (default if no other has been configured)
 
@@ -801,6 +852,7 @@ The following endpoints are available:
 # Apple Music
 /RoomName/applemusic/{now,next,queue}/song:{songID}
 /RoomName/applemusic/{now,next,queue}/album:{albumID}
+/RoomName/applemusic/{now,next,queue}/playlist:{playlistID}
 
 # Amazon Music
 /RoomName/amazonmusic/{now,next,queue}/song:{songID}
@@ -827,17 +879,22 @@ It only handles a single **spotify** account currently. It will probably use the
 You can find **Apple Music** song and album IDs via the [iTunes Search
 API](https://affiliate.itunes.apple.com/resources/documentation/itunes-store-web-service-search-api/).
 
-You can also use iTunes to figure out song and album IDs. Right click on a song or album and select "Share" -> "Copy Link". You can do this when you searched within Apple Music or from your media library as long as the song is available in Apple Music.
+You can also use iTunes to figure out song, album, and playlist IDs. Right click on a song, album, or playlist and select "Share" -> "Copy Link". You can do this when you searched within Apple Music or from your media library as long as the song is available in Apple Music.
 
 Have a look at the link you just copied. 
 
 *If you shared the link to a song:*
-The format is: https://itunes.apple.com/de/album/{songName}/{albumID}?i={songID}
+The format is: https://itunes.apple.com/{countryCode}/album/{songName}/{albumID}?i={songID}
 > eg: https://itunes.apple.com/de/album/blood-of-my-enemies/355363490?i=355364259
 
 *If you shared the link to an album:*
-The format is: https://itunes.apple.com/de/album/{albumName}/{albumID}
+The format is: https://itunes.apple.com/{countryCode}/album/{albumName}/{albumID}
 > eg: https://itunes.apple.com/de/album/f-g-restless/355363490
+
+*If you shared the link to a playlist:*
+The format is: https://itunes.apple.com/{countryCode}/playlist/{playlistName}/{playlistID}
+> eg: https://music.apple.com/gb/playlist/lofi-girls-favorites/pl.ed52c9eeaa0740079c21fa8e455b225e
+
 
 **Amazon Music**
 
@@ -874,11 +931,12 @@ Refer to the table below for available codes for BBC Radio Stations
 |----------------------------------|----------------------------------|
 |  BBC Radio 1                     | bbc_radio_one                    |
 |  BBC 1Xtra                       | bbc_1xtra                        |
-|  BBC 1Dance                      | bbc_1dance                       |
-|  BBC 1Relax                      | bbc_1relax                       |
+|  BBC 1Dance                      | bbc_radio_one_dance              |
+|  BBC 1Relax                      | bbc_radio_one_relax              |
 |  BBC Radio 2                     | bbc_radio_two                    |
 |  BBC Radio 3                     | bbc_radio_three                  |
-|  BBC Radio 4                     | bbc_radio_four                   |
+|  BBC Radio 4 FM                  | bbc_radio_fourfm                 |
+|  BBC Radio 4 LW                  | bbc_radio_fourlw                 |
 |  BBC Radio 4 Extra               | bbc_radio_four_extra             |
 |  BBC Radio 5 Live                | bbc_radio_five_live              |
 |  BBC Radio 5 Live Sports Extra   | bbc_five_live_sports_extra       |
@@ -916,6 +974,7 @@ Refer to the table below for available codes for BBC Radio Stations
 |  BBC Radio Nottingham            | bbc_radio_nottingham             |
 |  BBC Radio Oxford                | bbc_radio_oxford                 |
 |  BBC Radio Scotland FM           | bbc_radio_scotland_fm            |
+|  BBC Radio Scotland Extra        | bbc_radio_scotland_mw            | 
 |  BBC Radio Sheffield             | bbc_radio_sheffield              |
 |  BBC Radio Shropshire            | bbc_radio_shropshire             |
 |  BBC Radio Solent                | bbc_radio_solent                 |
@@ -928,6 +987,7 @@ Refer to the table below for available codes for BBC Radio Stations
 |  BBC Radio Three Counties Radio  | bbc_three_counties_radio         |
 |  BBC Radio Ulster                | bbc_radio_ulster                 |
 |  BBC Radio Wales                 | bbc_radio_wales_fm               |
+|  BBC Radio Wales Extra           | bbc_radio_wales_am               |
 |  BBC Radio Wiltshire             | bbc_radio_wiltshire              |
 |  BBC Radio WM                    | bbc_wm                           |
 |  BBC Radio York                  | bbc_radio_york                   |
@@ -1098,6 +1158,31 @@ or
 "data" property will be equal to the same data as you would get from /RoomName/state or /zones. There is an example endpoint in the root if this project called test_endpoint.js which you may fire up to get an understanding of what is posted, just invoke it with "node test_endpoint.js" in a terminal, and then start the http-api in another terminal.
 
 
+Server Sent Events
+-----
+
+As an alternative to the web hook you can also call the `/events` endpoint to receive every state change and topology change as [Server Sent Event](https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events).
+Compared to the web hook there is no configuration required on the server, and you can listen for events from multiple clients.
+
+Because it is a long-polling connection, you must take care of errors in your client code and re-connect if necessary.
+
+The server sends events formatted as single-line JSON in the format of Server Sent Events: every event starts with the string `data: `, followed by the single-line JSON formatted event, and is terminated by two new line characters.
+
+There are [several client libraries available](https://en.wikipedia.org/wiki/Server-sent_events#Libraries) to listen for Server Sent Events.
+Using `curl` yields the following output for some volume changes:
+
+```shell
+host:~ user$ curl localhost:5005/events
+data: {"type":"volume-change","data":{"uuid":"RINCON_E2832F58D9074C45B","previousVolume":13,"newVolume":19,"roomName":"Office"}}
+
+data: {"type":"volume-change","data":{"uuid":"RINCON_E2832F58D9074C45B","previousVolume":19,"newVolume":25,"roomName":"Office"}}
+
+data: {"type":"volume-change","data":{"uuid":"RINCON_E2832F58D9074C45B","previousVolume":25,"newVolume":24,"roomName":"Office"}}
+
+data: {"type":"volume-change","data":{"uuid":"RINCON_E2832F58D9074C45B","previousVolume":23,"newVolume":23,"roomName":"Office"}}
+
+```
+
 DOCKER
 -----
 
@@ -1157,4 +1242,9 @@ https://github.com/cjrpaterson/sonos-cron
 
 A Node server to receive notifications from node-sonos-http-api and push them via socket.io to the clients. 
 https://github.com/TimoKorinth/sonos-push-server
+
+**SonoBoss (Siri Shortcut)**
+
+A ChatGPT-assisted Siri Shortcut that acts as a virtual assistant to let you find music and control Sonos through voice and chat.
+https://github.com/Barloew/SonoBoss
 
